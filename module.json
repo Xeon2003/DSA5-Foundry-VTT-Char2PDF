@@ -1,0 +1,21 @@
+{
+	"name": "dsa5-char2pdf",
+  "title": "DSA 5 - Char2pdf",
+  "description": "Export your Avartar to PDF Template",
+  "author": "JWinsen",
+  "authors": [],
+  "url": "",
+  "license": "LICENSE",
+  "flags": {},
+  "version": "0.0.1",
+  "minimumCoreVersion": "0.6.0",
+  "compatibleCoreVersion": "0.8.8",
+  "esmodules": [
+    "./scripts/dsa5-char2pdf.js"
+  ],
+  "scripts": [
+    "./lib/FileSaver.js",
+    "./lib/pdf-lib.js",
+    "./lib/libwebp.js"
+  ]
+}
