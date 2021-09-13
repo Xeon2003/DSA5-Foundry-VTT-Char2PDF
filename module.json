@@ -7,7 +7,7 @@
   "url": "",
   "license": "LICENSE",
   "flags": {},
-  "version": "v0.2-alpha",
+  "version": "v0.3-alpha",
   "minimumCoreVersion": "0.8.8",
   "compatibleCoreVersion": "0.8.9",
   "esmodules": [
@@ -15,8 +15,7 @@
   ],
   "scripts": [
     "./lib/FileSaver.js",
-    "./lib/pdf-lib.js",
-    "./lib/libwebp.js"
+    "./lib/pdf-lib.js"
   ], 
   "url": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF",
   "manifest": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF/releases/latest/download/module.json",
