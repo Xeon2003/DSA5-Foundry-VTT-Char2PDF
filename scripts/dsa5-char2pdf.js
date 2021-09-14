@@ -106,6 +106,41 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
 };
 
 /**
+ * Converts the Leitwert short into the long version  
+*/ 
+function Leitwert_long (Leitwert_short) {
+  switch((Leitwert_short).toUpperCase()) {
+    case "MU":
+      Leitwert_short="Mut"
+      break;
+    case "KL":
+      Leitwert_short="Klugheit"
+      break;
+    case "IN":
+      Leitwert_short="Intuition"
+      break;
+    case "CH":
+      Leitwert_short="Charisma"
+      break;
+    case "FF":
+      Leitwert_short="Fingerfertigkeit"
+      break;
+    case "GE":
+      Leitwert_short="Gewandheit"
+      break;
+    case "KO":
+      Leitwert_short="Konstitution"
+      break;
+    case "KK":
+      Leitwert_short="Körperkraft"
+      break;
+    default:
+    break;
+  };
+  return Leitwert_short
+}
+
+/**
  * Call function to fill pdf template
  */
 
@@ -163,7 +198,6 @@ if (entity.data.type === "character") {
     var actor_imageBytes = await fetch(actor_image_url).then(res => res.arrayBuffer())
   }
   else {
-    ui.notifications.warn("Your actor picture won't be exported to PDF. Only JPG and PNG Format ist supported.");
     actor_imageBytes = convertImage(actor_image_url);
   }
     var actor_image = await pdfDoc.embedPng(actor_imageBytes)
@@ -611,39 +645,66 @@ form.getTextField('KK_1').setText(p_kk+'')
     form.getTextField('Leit_Magie_Ansicht').setText(Leitwert_long(entity.data.data.guidevalue.magical)+'')
     form.getTextField('Held_Merkmale').setText(Leitwert_long(entity.data.data.feature.magical)+'')
     
-    function Leitwert_long (Leitwert_short) {
-      switch((Leitwert_short).toUpperCase()) {
-        case "MU":
-          Leitwert_short="Mut"
-          break;
-        case "KL":
-          Leitwert_short="Klugheit"
-          break;
-        case "IN":
-          Leitwert_short="Intuition"
-          break;
-        case "CH":
-          Leitwert_short="Charisma"
-          break;
-        case "FF":
-          Leitwert_short="Fingerfertigkeit"
-          break;
-        case "GE":
-          Leitwert_short="Gewandheit"
-          break;
-        case "KO":
-          Leitwert_short="Konstitution"
-          break;
-        case "KK":
-          Leitwert_short="Körperkraft"
-          break;
-        default:
-        break;
-      };
-      return Leitwert_short
-    }
+    
 
   /** magictrick */  
+  const combat_magictrick = map
+  .filter(value => value.type === "magictrick");
+  var f_combat_magictrick = Array.from(combat_magictrick.values(), value => value.name).join(", ")
+
+  form.getTextField('Held_Tricks').setText(f_combat_magictrick) 
+
+  /** special_magic */  
+  const special_magic = map
+  .filter(value => value.type === "specialability")
+  .filter(value => value.data.data.category.value === "magical");
+  var f_special_magic = Array.from(special_magic.values(), value => value.name).join(", ")
+
+  form.getTextField('Held_SF_Mag').setText(f_special_magic) 
+
+  /** Cleric */
+  /** liturgy */
+  const combat_liturgy = map
+  .filter(value => value.type === "liturgy")
+  var arrayLength = combat_liturgy.length;    
+    if (arrayLength > 40) {
+      arrayLength = 40 
+      ui.notifications.warn("You have more than 40 liturgys! The template can only hold a maximum of 40");
+    }
+    for (var i = 0; i < arrayLength; i++) {
+      (form.getTextField('Liturgie_Anzeige_'+(i+1))).setText(combat_liturgy[i].name+'');
+      (form.getTextField('L_Probe_'+(i+1))).setText((combat_liturgy[i].data.data.characteristic1.value).toUpperCase()+' / '+(combat_liturgy[i].data.data.characteristic2.value).toUpperCase()+' / '+(combat_liturgy[i].data.data.characteristic3.value).toUpperCase()+'');
+      (form.getTextField('L_FW_'+(i+1))).setText((combat_liturgy[i].data.data.talentValue.value+''));
+      (form.getTextField('L_KaP_'+(i+1))).setText((combat_liturgy[i].data.data.AsPCost.value+''));
+      (form.getTextField('L_LDauer_'+(i+1))).setText((combat_liturgy[i].data.data.castingTime.value+''));
+      (form.getTextField('L_RW_'+(i+1))).setText((combat_liturgy[i].data.data.range.value+''));
+      (form.getTextField('L_WDauer_'+(i+1))).setText((combat_liturgy[i].data.data.duration.value+''));
+      (form.getTextField('L_Aspekt_'+(i+1))).setText((''));
+      (form.getTextField('L_SF_'+(i+1))).setText((combat_liturgy[i].data.data.StF.value+''));
+      (form.getTextField('L_Wirkung_'+(i+1))).setText((combat_liturgy[i].data.data.effect.value+''));
+      (form.getTextField('L_Seite_'+(i+1))).setText((''));
+    }
+
+    form.getTextField('KE_Max_2').setText(entity.data.data.status.karmaenergy.max+'')
+    form.getTextField('KE_Aktuell').setText(entity.data.data.status.karmaenergy.current+'')
+    form.getTextField('Held_Tradition_klerikal').setText(entity.data.data.tradition.clerical+'')
+    form.getTextField('Leit_Karma_Anzeige').setText(Leitwert_long(entity.data.data.guidevalue.clerical)+'')
+    form.getTextField('Held_Aspekt').setText(Leitwert_long(entity.data.data.feature.clerical)+'')
+    
+  /** blessing */  
+  const combat_blessing = map
+  .filter(value => value.type === "blessing");
+  var f_combat_blessing = Array.from(combat_blessing.values(), value => value.name).join(", ")
+
+  form.getTextField('Held_Segen').setText(f_combat_blessing) 
+
+  /** special_cleric */  
+  const special_cleric = map
+  .filter(value => value.type === "specialability")
+  .filter(value => value.data.data.category.value === "clerical");
+  var f_special_cleric = Array.from(special_cleric.values(), value => value.name).join(", ")
+
+  form.getTextField('Held_SF_Karm').setText(f_special_cleric) 
 
   /** save filled template */
 
