@@ -1,3 +1,4 @@
+
 /**
  * A class which holds some constants for dsa-char2pdf
  */
@@ -74,13 +75,17 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
     name: 'DSA5-Char2PDF',
       icon: '<i class="fas fa-tasks"></i>',
       condition: li => {
+      
         const entity = ActorDirectory.collection.get(li.data("entityId"));
-        return entity.owner;
+        //check for the right DSA5 template and for the right type
+        if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character") {  
+          return entity.owner;
+        }
       },
       callback: li => {
         
         const entity = ActorDirectory.collection.get(li.data("entityId"));
-        fillForm(entity._id); 
+        fillForm(entity._id)
       }
     })
 });
@@ -148,22 +153,21 @@ async function fillForm(_dsa_actor_id) {
 
 /** declaration
  */
-var PDFDocument = PDFLib.PDFDocument;
-var StandardFonts = PDFLib.StandardFonts;
-var rgb = PDFLib.rgb;
+ var PDFDocument = PDFLib.PDFDocument;
+ var StandardFonts = PDFLib.StandardFonts;
+ var rgb = PDFLib.rgb;
+ 
+ const entity = ActorDirectory.collection.get(_dsa_actor_id);
+ let map = entity.data.items;
+ 
+ const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
+ const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
+ const pdfDoc = await PDFDocument.load(formPdfBytes)
+ const form = pdfDoc.getForm()
 
-const entity = ActorDirectory.collection.get(_dsa_actor_id);
-let map = entity.data.items;
-
-const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
-const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
-const pdfDoc = await PDFDocument.load(formPdfBytes)
-const form = pdfDoc.getForm()
 
 /** Check for the right actor template "character" */
 
-if (entity.data.type === "character") {
- 
     /** Current date in right format */
 
     var today = new Date();
@@ -205,24 +209,23 @@ if (entity.data.type === "character") {
  
   /** main attributes */
 
-const p_mu = entity.data.data.characteristics.mu.value
-const p_kl = entity.data.data.characteristics.kl.value
-const p_in = entity.data.data.characteristics.in.value
-const p_ch = entity.data.data.characteristics.ch.value
-const p_ff = entity.data.data.characteristics.ff.value
-const p_ge = entity.data.data.characteristics.ge.value
-const p_ko = entity.data.data.characteristics.ko.value
-const p_kk = entity.data.data.characteristics.kk.value
+  const p_mu = entity.data.data.characteristics.mu.value
+  const p_kl = entity.data.data.characteristics.kl.value
+  const p_in = entity.data.data.characteristics.in.value
+  const p_ch = entity.data.data.characteristics.ch.value
+  const p_ff = entity.data.data.characteristics.ff.value
+  const p_ge = entity.data.data.characteristics.ge.value
+  const p_ko = entity.data.data.characteristics.ko.value
+  const p_kk = entity.data.data.characteristics.kk.value
 
-
-form.getTextField('MU_1').setText(p_mu+'')
-form.getTextField('KL_1').setText(p_kl+'')
-form.getTextField('IN_1').setText(p_in+'')
-form.getTextField('CH_1').setText(p_ch+'')
-form.getTextField('FF_1').setText(p_ff+'')
-form.getTextField('GE_1').setText(p_ge+'')
-form.getTextField('KO_1').setText(p_ko+'')
-form.getTextField('KK_1').setText(p_kk+'')
+  form.getTextField('MU_1').setText(p_mu+'')
+  form.getTextField('KL_1').setText(p_kl+'')
+  form.getTextField('IN_1').setText(p_in+'')
+  form.getTextField('CH_1').setText(p_ch+'')
+  form.getTextField('FF_1').setText(p_ff+'')
+  form.getTextField('GE_1').setText(p_ge+'')
+  form.getTextField('KO_1').setText(p_ko+'')
+  form.getTextField('KK_1').setText(p_kk+'')
 
   /** disadvantages */
 
@@ -645,8 +648,6 @@ form.getTextField('KK_1').setText(p_kk+'')
     form.getTextField('Leit_Magie_Ansicht').setText(Leitwert_long(entity.data.data.guidevalue.magical)+'')
     form.getTextField('Held_Merkmale').setText(Leitwert_long(entity.data.data.feature.magical)+'')
     
-    
-
   /** magictrick */  
   const combat_magictrick = map
   .filter(value => value.type === "magictrick");
@@ -707,13 +708,9 @@ form.getTextField('KK_1').setText(p_kk+'')
   form.getTextField('Held_SF_Karm').setText(f_special_cleric) 
 
   /** save filled template */
-
+/**
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
     saveAs(blob, "DSA5-"+entity.name+".pdf")   
-  }
-else
-  {
-  ui.notifications.warn("Only actor sheets from a character will be supportet, NPC and creatures are not");
-  }
+*/    
 }
