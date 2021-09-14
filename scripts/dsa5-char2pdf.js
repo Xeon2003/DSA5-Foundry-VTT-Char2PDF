@@ -86,6 +86,26 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
 });
 
 /**
+ * Converts an image into another format on the client side
+ * Thanks to arcanist --> https://github.com/arcanistzed for giving me this tip! 
+ * 
+ * @param {String} url - The URL of the image to convert
+ * @param {String} format - The format the image should be converted to
+ * @param {Number} [q=0.92] The quality of the conversion from 0 to 100 for lossy formats (default is 92%)
+ * @return {URL}  A Data URL pointing to the converted image
+ */
+ function convertImage(url, format = "png", q = 0.92) {
+  const source = document.createElement("img");
+  source.src = url;
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(source, 0, 0);
+  return canvas.toDataURL('image/' + format, q * 100);
+};
+
+/**
  * Call function to fill pdf template
  */
 
@@ -144,31 +164,11 @@ if (entity.data.type === "character") {
   }
   else {
     ui.notifications.warn("Your actor picture won't be exported to PDF. Only JPG and PNG Format ist supported.");
-    var actor_imageBytes = await fetch(dsa5char2pdf.PATH.main + "templates/wrongformat.png").then(res => res.arrayBuffer())
+    actor_imageBytes = convertImage(actor_image_url);
   }
     var actor_image = await pdfDoc.embedPng(actor_imageBytes)
     form.getButton('Charakterbild').setImage(actor_image)
-    
-  
-  /**
-    const webp=require('webp-converter');
-
-  //pass input image(.webp image) path ,output image(.jpeg,.pnp .....)
-
-  //dwebp(input,output,option)
-
-  const result = webp.dwebp("nodejs_logo.webp","nodejs_logo.jpg","-o",logging="-v");
-  result.then((response) => {
-    console.log(response);
-  });
-
-
-    const actor_imageBytes = await fetch(actor_image_url).then(res => res.arrayBuffer())
-    const actor_image = await pdfDoc.embedPng(actor_imageBytes)
-    const n_image = form.getButton('Charakterbild')
-    n_image.setImage(actor_image)
-  */
-
+ 
   /** main attributes */
 
 const p_mu = entity.data.data.characteristics.mu.value
@@ -605,14 +605,51 @@ form.getTextField('KK_1').setText(p_kk+'')
       (form.getTextField('Z_Seite_'+(i+1))).setText((''));
     }
 
-    form.getTextField('AE_Max_1').setText(entity.data.data.status.astralenergy.max+'')
+    form.getTextField('AE_Max_2').setText(entity.data.data.status.astralenergy.max+'')
     form.getTextField('AE_Aktuell').setText(entity.data.data.status.astralenergy.current+'')
+    form.getTextField('Held_Tradition_magisch').setText(entity.data.data.tradition.magical+'')
+    form.getTextField('Leit_Magie_Ansicht').setText(Leitwert_long(entity.data.data.guidevalue.magical)+'')
+    form.getTextField('Held_Merkmale').setText(Leitwert_long(entity.data.data.feature.magical)+'')
+    
+    function Leitwert_long (Leitwert_short) {
+      switch((Leitwert_short).toUpperCase()) {
+        case "MU":
+          Leitwert_short="Mut"
+          break;
+        case "KL":
+          Leitwert_short="Klugheit"
+          break;
+        case "IN":
+          Leitwert_short="Intuition"
+          break;
+        case "CH":
+          Leitwert_short="Charisma"
+          break;
+        case "FF":
+          Leitwert_short="Fingerfertigkeit"
+          break;
+        case "GE":
+          Leitwert_short="Gewandheit"
+          break;
+        case "KO":
+          Leitwert_short="Konstitution"
+          break;
+        case "KK":
+          Leitwert_short="Körperkraft"
+          break;
+        default:
+        break;
+      };
+      return Leitwert_short
+    }
+
+  /** magictrick */  
 
   /** save filled template */
 
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
-    saveAs(blob, "DSA5-"+entity.name+".pdf") 
+    saveAs(blob, "DSA5-"+entity.name+".pdf")   
   }
 else
   {
