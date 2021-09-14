@@ -708,9 +708,9 @@ async function fillForm(_dsa_actor_id) {
   form.getTextField('Held_SF_Karm').setText(f_special_cleric) 
 
   /** save filled template */
-/**
+
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
     saveAs(blob, "DSA5-"+entity.name+".pdf")   
-*/    
+    
 }
