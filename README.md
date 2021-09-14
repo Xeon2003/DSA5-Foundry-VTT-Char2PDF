@@ -27,3 +27,9 @@ As `gamemaster` go to the `Manage Modules` options menu in the `Game Settings` f
 ## Used librarys: 
 - *FileSaver.js* (using [FileSaver.js](https://github.com/eligrey/FileSaver.js)) by [eligrey](https://github.com/eligrey)
 - *pdf-lib.js* (using [pdf-lib.js](https://github.com/Hopding/pdf-lib)) by [Hopding](https://github.com/Hopding)
+
+## License
+
+Copyright © 2021 JWinsen
+
+This package is under an [MIT license](LICENSE) and the [Foundry Virtual Tabletop Limited License Agreement for module development](https://foundryvtt.com/article/license/).
