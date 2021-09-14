@@ -1,3 +1,5 @@
+![Latest Release Download Count](https://img.shields.io/github/downloads/JWinsen/DSA5-Foundry-VTT-Char2PDF/latest/module.zip?label=Downloads&style=flat-square&color=9b43a8) ![Foundry Core Compatible Version](https://img.shields.io/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2FJWinsen%2FDSA5-Foundry-VTT-Char2PDF%2Fmain%2Fmodule.json&label=Foundry%20Core%20Compatible%20Version&query=$.compatibleCoreVersion&style=flat-square&color=ff6400)
+
 # DSA5-Foundry-VTT-Char2PDF
 *Foundry VTT module to transfer the DSA 5 actors to PDF*
 
