@@ -9,9 +9,10 @@
   "version": "v0.5",
   "minimumCoreVersion": "0.8.8",
   "compatibleCoreVersion": "0.8.9",
-  "system": [
-    "dsa5"
-  ],
+   "dependencies": [{
+        "name": "dsa5",
+        "type": "system"
+    }],
   "esmodules": [
     "./scripts/dsa5-char2pdf.js"
   ],
