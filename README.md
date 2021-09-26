@@ -3,7 +3,7 @@
 # DSA5-Foundry-VTT-Char2PDF
 *Foundry VTT module to transfer the DSA 5 actors to PDF*
 
-This module is to extend the functionality of the [Foundry VTT](https://foundryvtt.com/) platform and gives the users of [The Dark Eye / Das schwarze Auge 5](https://foundryvtt.com/packages/dsa5) the possibility to export their players directly into the original Ulisses PDF template.  
+This module is to extend the functionality of the [Foundry VTT](https://foundryvtt.com/) platform and gives the users of [The Dark Eye / Das schwarze Auge 5](https://foundryvtt.com/packages/dsa5) the possibility to export their characters into the official Ulisses PDF template.  
 
 ## Installation
 ### Automatic Installtion
