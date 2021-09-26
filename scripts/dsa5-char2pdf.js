@@ -1,3 +1,6 @@
+var cb_actors_tale = false;
+var cb_del_pages = false;
+var modul_version = '';
 
 /**
  * A class which holds some constants for dsa-char2pdf
@@ -7,15 +10,16 @@
   static ID = 'dsa5-char2pdf';
 
   static TEMPLATES = {
-    PDF_Template: `modules/${this.ID}/templates/template.pdf`
+    PDF_Template: `modules/${this.ID}/templates/template.pdf`,
+    PDF_Biography: `modules/${this.ID}/templates/template_biography.pdf`,
+    export_preferences: `modules/${this.ID}/templates/export_preferences.hbs`
   }
 
   static PATH = {
     main: `modules/${this.ID}/`
   }
 
-/**
-   * A small helper function which leverages developer mode flags to gate debug logs.
+/** A small helper function which leverages developer mode flags to gate debug logs.
    * 
    * @param {boolean} force - forces the log even if the debug flag is not on
    * @param  {...any} args - what to log
@@ -30,7 +34,7 @@
 }
 
 /** Fuction Roman Numeral Converter by Steven Levithan 
- * https://blog.stevenlevithan.com/archives/javascript-roman-numeral-converter  
+ *  https://blog.stevenlevithan.com/archives/javascript-roman-numeral-converter  
 */
 
 function romanize (num) {
@@ -60,38 +64,96 @@ function deromanize (str) {
 	return num;
 }
 
-/** register our module's debug flag with developer mode's custom hook
- */
+/** register our module's debug flag with developer mode's custom hook */
 
 Hooks.once('devModeReady', ({ registerPackageDebugFlag }) => {
   registerPackageDebugFlag(dsa5char2pdf.ID);
 });
 
-/** register Hook to Display Option within the actor context menu
-*/
+/** register Hook to Display Option within the actor context menu */
 
 Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
   entryOptions.push({
     name: 'DSA5-Char2PDF',
       icon: '<i class="fas fa-tasks"></i>',
       condition: li => {
-      
         const entity = ActorDirectory.collection.get(li.data("entityId"));
         //check for the right DSA5 template and for the right type
-        if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character") {  
-          return entity.owner;
+        if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character") 
+        {  
+          return entity.id;
         }
       },
       callback: li => {
-        
-        const entity = ActorDirectory.collection.get(li.data("entityId"));
-        fillForm(entity._id)
+        const actor = ActorDirectory.collection.get(li.data("entityId"));
+        const exportPreferences = new ExportPreferences(actor);
+        exportPreferences.render(true);
       }
     })
 });
 
-/**
- * Converts an image into another format on the client side
+/** Set up FormApplication */
+
+class ExportPreferences extends FormApplication {
+  constructor(actor) {
+    super();
+    this.actor = actor;
+  }
+
+  static get defaultOptions() {
+    const defaults = super.defaultOptions;
+    const overrides = {
+      closeOnSubmit: false,
+      height: 'auto',
+      id: 'export_preferences',
+      submitOnChange: true,
+      template: dsa5char2pdf.TEMPLATES.export_preferences,
+      title: 'Export DSA5 - char2PDF',
+      chkbox_actorstale: false, 
+      chkbox_delpages: false,
+    };
+    const mergedOptions = foundry.utils.mergeObject(defaults, overrides);
+    return mergedOptions;
+  }
+
+  getData(options) {
+    return {
+      ID: this.actor.id,
+      actor: this.actor.name,
+      chkbox_actorstale: false, 
+      chkbox_delpages: false
+    };
+  }
+
+	activateListeners() {
+
+		document.getElementById("btn_Export").addEventListener("click", event => {
+		event.preventDefault();
+		fillForm(this.actor.id);
+    this.close();
+		});
+
+    const chkbox_actorstale = document.querySelector("input[name=chkbox_actors_tale]");
+    chkbox_actorstale.addEventListener('change', function() {
+      if (this.checked) {
+        cb_actors_tale = true; 
+      } else {
+        cb_actors_tale = false; 
+      }
+    });
+
+    const chkbox_delpages = document.querySelector("input[name=chkbox_del_pages]");
+    chkbox_delpages.addEventListener('change', function() {
+      if (this.checked) {
+        cb_del_pages = true;
+      } else {
+        cb_del_pages = false;
+      }
+    });
+	};
+}
+
+/**Converts an image into another format on the client side
  * Thanks to arcanist --> https://github.com/arcanistzed for giving me this tip! 
  * 
  * @param {String} url - The URL of the image to convert
@@ -110,8 +172,7 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
   return canvas.toDataURL('image/' + format, q * 100);
 };
 
-/**
- * Converts the Leitwert short into the long version  
+/** Converts the Leitwert short into the long version  
 */ 
 function Leitwert_long (Leitwert_short) {
   switch((Leitwert_short).toUpperCase()) {
@@ -145,26 +206,30 @@ function Leitwert_long (Leitwert_short) {
   return Leitwert_short
 }
 
-/**
- * Call function to fill pdf template
- */
+/** Call function to fill pdf template */
 
 async function fillForm(_dsa_actor_id) {
 
 /** declaration
  */
- var PDFDocument = PDFLib.PDFDocument;
- var StandardFonts = PDFLib.StandardFonts;
- var rgb = PDFLib.rgb;
- 
- const entity = ActorDirectory.collection.get(_dsa_actor_id);
- let map = entity.data.items;
- 
- const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
- const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
- const pdfDoc = await PDFDocument.load(formPdfBytes)
- const form = pdfDoc.getForm()
+var PDFDocument = PDFLib.PDFDocument;
+var StandardFonts = PDFLib.StandardFonts;
+var rgb = PDFLib.rgb;
 
+const entity = ActorDirectory.collection.get(_dsa_actor_id);
+let map = entity.data.items;
+ 
+const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
+const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
+var pdfDoc = await PDFDocument.load(formPdfBytes)
+var form = pdfDoc.getForm()
+var cb_del_pages_ismage = false;
+var cb_del_pages_ispriest = false;
+
+/** check for modul version */
+
+const ModuleAPI = game.modules.get('dsa5-char2pdf')
+modul_version = (ModuleAPI.data.version)
 
 /** Check for the right actor template "character" */
 
@@ -621,6 +686,10 @@ async function fillForm(_dsa_actor_id) {
 
   /** Mage */
   /** spells */
+  if (entity.data.isMage === true) {
+      cb_del_pages_ismage = true
+  }
+
   const combat_spells = map
   .filter(value => value.type === "spell")
   var arrayLength = combat_spells.length;    
@@ -707,10 +776,47 @@ async function fillForm(_dsa_actor_id) {
 
   form.getTextField('Held_SF_Karm').setText(f_special_cleric) 
 
-  /** save filled template */
+   /** delete unused PDF pages */
+  /** remove pages 
+    if (cb_del_pages === true) {
+      console.log("cb_del_pages ="+cb_del_pages)
+      if (cb_del_pages_ismage === true && cb_del_pages_ispriest === false) {
+        console.log("cb_del_pages_ismage=" + cb_del_pages_ismage +" / cb_del_pages_ispriest= " + cb_del_pages_ispriest)
+        const pages = pdfDoc.getPages()
+        const firstPage = pages[0]
+        pdfDoc.removePage(4);
+        pdfDoc.removePage(4);
+        console.log("5 + 6 deleted")
+      }
+    }
+  */
+  /** biography */
+
+  if (cb_actors_tale === true) {
+    const biographyUrl = dsa5char2pdf.TEMPLATES.PDF_Biography
+    const biography_PdfBytes = await fetch(biographyUrl).then(res => res.arrayBuffer())
+    const biography_PdfDoc = await PDFDocument.load(biography_PdfBytes)
+    const [first_biography_page] = await pdfDoc.copyPages(biography_PdfDoc, [0])
+    pdfDoc.insertPage(8, first_biography_page)
+    console.log(pdfDoc)
+  };
+
+  /** form.getTextField('Biografie_Inhalt_1').setText(entity.data.data.details.biography.value+'')*/
+
+
+
+  /** set PDF Metadata for PDF*/
+  pdfDoc.setTitle("DSA5-"+entity.name+".pdf created on "+today)
+  pdfDoc.setSubject('https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF')
+  pdfDoc.setProducer('DSA5 - char2PDF ' +modul_version)
+  pdfDoc.setCreator('pdf-lib (https://github.com/Hopding/pdf-lib)')
+  pdfDoc.setCreationDate(new Date())
+  pdfDoc.setModificationDate(new Date())
+
+ /** save filled template */
 
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
     saveAs(blob, "DSA5-"+entity.name+".pdf")   
-    
+ 
 }
