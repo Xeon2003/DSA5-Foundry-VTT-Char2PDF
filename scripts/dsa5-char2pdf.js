@@ -34,7 +34,7 @@ var modul_version = '';
 }
 
 /** Fuction Roman Numeral Converter by Steven Levithan 
- *  https://blog.stevenlevithan.com/archives/javascript-roman-numeral-converter  
+ * https://blog.stevenlevithan.com/archives/javascript-roman-numeral-converter  
 */
 
 function romanize (num) {
@@ -108,7 +108,7 @@ class ExportPreferences extends FormApplication {
       id: 'export_preferences',
       submitOnChange: true,
       template: dsa5char2pdf.TEMPLATES.export_preferences,
-      title: 'Export DSA5 - char2PDF',
+      title: 'DSA5 - char2PDF',
       chkbox_actorstale: false, 
       chkbox_delpages: false,
     };
@@ -153,26 +153,54 @@ class ExportPreferences extends FormApplication {
 	};
 }
 
-/**Converts an image into another format on the client side
- * Thanks to arcanist --> https://github.com/arcanistzed for giving me this tip! 
- * 
- * @param {String} url - The URL of the image to convert
- * @param {String} format - The format the image should be converted to
- * @param {Number} [q=0.92] The quality of the conversion from 0 to 100 for lossy formats (default is 92%)
- * @return {URL}  A Data URL pointing to the converted image
- */
- function convertImage(url, format = "png", q = 0.92) {
-  const source = document.createElement("img");
-  source.src = url;
-  const canvas = document.createElement("canvas");
-  canvas.width = source.width;
-  canvas.height = source.height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(source, 0, 0);
-  return canvas.toDataURL('image/' + format, q * 100);
-};
+/** Function to convert webp to png for PDF-Import */  
 
-/** Converts the Leitwert short into the long version  
+ function toDataUrl(src, outputFormat) {
+  // create an image-object to convert webp to png for PDF-Import
+  return new Promise((resolve, reject) => {
+    var img = new Image();
+    // to solve Forge VTT problem - add CORS to prenvent tainted canvases
+    img.crossOrigin = 'Anonymous';
+    img.onload = function() {
+      var canvas = document.createElement('CANVAS');
+      var ctx = canvas.getContext('2d');
+      var dataURL;
+      canvas.height = this.naturalHeight;
+      canvas.width = this.naturalWidth;
+      ctx.drawImage(this, 0, 0);
+      // Convert the canvas to a data url
+      dataURL = canvas.toDataURL(outputFormat);
+      resolve(dataURL);
+      // Mark the canvas to be ready for garbage 
+      // collection
+      canvas = null;
+    };
+    // Load the image
+    img.src = src;
+    // make sure the load event fires for cached images too
+    if (img.complete || img.complete === undefined) {
+      // Flush cache
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+      // Try again
+      img.src = src;
+    }
+  })
+}
+
+/** Function to get result of the async task to read the pictures from a source with the use of 'await' */
+async function get_actor_pic(src) {
+  try {
+      const result = await toDataUrl(src);
+      return (result);
+
+  } catch (error) {
+      console.error('ERROR:');
+      console.error(error);
+  }
+}
+
+/**
+ * Converts the Leitwert short into the long version  
 */ 
 function Leitwert_long (Leitwert_short) {
   switch((Leitwert_short).toUpperCase()) {
@@ -206,32 +234,28 @@ function Leitwert_long (Leitwert_short) {
   return Leitwert_short
 }
 
-/** Call function to fill pdf template */
+/**
+ * Call function to fill pdf template
+ */
 
 async function fillForm(_dsa_actor_id) {
 
-/** declaration
- */
-var PDFDocument = PDFLib.PDFDocument;
-var StandardFonts = PDFLib.StandardFonts;
-var rgb = PDFLib.rgb;
-
-const entity = ActorDirectory.collection.get(_dsa_actor_id);
-let map = entity.data.items;
+/** declaration */
+ var PDFDocument = PDFLib.PDFDocument;
+ var StandardFonts = PDFLib.StandardFonts;
+ var rgb = PDFLib.rgb;
  
-const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
-const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
-var pdfDoc = await PDFDocument.load(formPdfBytes)
-var form = pdfDoc.getForm()
-var cb_del_pages_ismage = false;
-var cb_del_pages_ispriest = false;
+ const entity = ActorDirectory.collection.get(_dsa_actor_id);
+ let map = entity.data.items;
+ 
+ const formUrl = dsa5char2pdf.TEMPLATES.PDF_Template
+ const formPdfBytes = await fetch(formUrl).then(res => res.arrayBuffer())
+ const pdfDoc = await PDFDocument.load(formPdfBytes)
+ const form = pdfDoc.getForm()
 
-/** check for modul version */
-
-const ModuleAPI = game.modules.get('dsa5-char2pdf')
-modul_version = (ModuleAPI.data.version)
-
-/** Check for the right actor template "character" */
+	/** check for modul version */
+	const ModuleAPI = game.modules.get('dsa5-char2pdf')
+	modul_version = (ModuleAPI.data.version)
 
     /** Current date in right format */
 
@@ -267,7 +291,7 @@ modul_version = (ModuleAPI.data.version)
     var actor_imageBytes = await fetch(actor_image_url).then(res => res.arrayBuffer())
   }
   else {
-    actor_imageBytes = convertImage(actor_image_url);
+     actor_imageBytes = await get_actor_pic(actor_image_url)
   }
     var actor_image = await pdfDoc.embedPng(actor_imageBytes)
     form.getButton('Charakterbild').setImage(actor_image)
@@ -686,10 +710,6 @@ modul_version = (ModuleAPI.data.version)
 
   /** Mage */
   /** spells */
-  if (entity.data.isMage === true) {
-      cb_del_pages_ismage = true
-  }
-
   const combat_spells = map
   .filter(value => value.type === "spell")
   var arrayLength = combat_spells.length;    
@@ -776,47 +796,18 @@ modul_version = (ModuleAPI.data.version)
 
   form.getTextField('Held_SF_Karm').setText(f_special_cleric) 
 
-   /** delete unused PDF pages */
-  /** remove pages 
-    if (cb_del_pages === true) {
-      console.log("cb_del_pages ="+cb_del_pages)
-      if (cb_del_pages_ismage === true && cb_del_pages_ispriest === false) {
-        console.log("cb_del_pages_ismage=" + cb_del_pages_ismage +" / cb_del_pages_ispriest= " + cb_del_pages_ispriest)
-        const pages = pdfDoc.getPages()
-        const firstPage = pages[0]
-        pdfDoc.removePage(4);
-        pdfDoc.removePage(4);
-        console.log("5 + 6 deleted")
-      }
-    }
-  */
-  /** biography */
+	/** set PDF Metadata for PDF*/
+	pdfDoc.setTitle("DSA5-"+entity.name+".pdf created on "+today)
+	pdfDoc.setSubject('https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF')
+	pdfDoc.setProducer('DSA5 - char2PDF ' +modul_version)
+	pdfDoc.setCreator('pdf-lib (https://github.com/Hopding/pdf-lib)')
+	pdfDoc.setCreationDate(new Date())
+	pdfDoc.setModificationDate(new Date())
 
-  if (cb_actors_tale === true) {
-    const biographyUrl = dsa5char2pdf.TEMPLATES.PDF_Biography
-    const biography_PdfBytes = await fetch(biographyUrl).then(res => res.arrayBuffer())
-    const biography_PdfDoc = await PDFDocument.load(biography_PdfBytes)
-    const [first_biography_page] = await pdfDoc.copyPages(biography_PdfDoc, [0])
-    pdfDoc.insertPage(8, first_biography_page)
-    console.log(pdfDoc)
-  };
-
-  /** form.getTextField('Biografie_Inhalt_1').setText(entity.data.data.details.biography.value+'')*/
-
-
-
-  /** set PDF Metadata for PDF*/
-  pdfDoc.setTitle("DSA5-"+entity.name+".pdf created on "+today)
-  pdfDoc.setSubject('https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF')
-  pdfDoc.setProducer('DSA5 - char2PDF ' +modul_version)
-  pdfDoc.setCreator('pdf-lib (https://github.com/Hopding/pdf-lib)')
-  pdfDoc.setCreationDate(new Date())
-  pdfDoc.setModificationDate(new Date())
-
- /** save filled template */
+	/** save filled template */
 
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
     saveAs(blob, "DSA5-"+entity.name+".pdf")   
- 
+    
 }
