@@ -5,7 +5,7 @@
   "author": "JWinsen",
   "license": "MIT LICENSE",
   "flags": {},
-  "version": "v0.5.1",
+  "version": "v0.5.2",
   "minimumCoreVersion": "0.8.8",
   "compatibleCoreVersion": "0.8.9",
    "dependencies": [{

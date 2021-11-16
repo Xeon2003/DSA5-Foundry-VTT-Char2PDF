@@ -125,6 +125,7 @@ class ExportPreferences extends FormApplication {
     };
   }
 
+  
 	activateListeners() {
 
 		document.getElementById("btn_Export").addEventListener("click", event => {
@@ -132,7 +133,7 @@ class ExportPreferences extends FormApplication {
 		fillForm(this.actor.id);
     this.close();
 		});
-
+/**
     const chkbox_actorstale = document.querySelector("input[name=chkbox_actors_tale]");
     chkbox_actorstale.addEventListener('change', function() {
       if (this.checked) {
@@ -149,9 +150,10 @@ class ExportPreferences extends FormApplication {
       } else {
         cb_del_pages = false;
       }
-    });
+    });*/
 	};
 }
+
 
 /** Function to convert webp to png for PDF-Import */  
 
@@ -239,7 +241,7 @@ function Leitwert_long (Leitwert_short) {
  */
 
 async function fillForm(_dsa_actor_id) {
-
+  try {
 /** declaration */
  var PDFDocument = PDFLib.PDFDocument;
  var StandardFonts = PDFLib.StandardFonts;
@@ -809,5 +811,8 @@ async function fillForm(_dsa_actor_id) {
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
     saveAs(blob, "DSA5-"+entity.name+".pdf")   
-    
+  }  
+  catch (err) {
+  ui.notifications.error(`Char2PDF - Error: ${err.message}`);
+  }
 }
