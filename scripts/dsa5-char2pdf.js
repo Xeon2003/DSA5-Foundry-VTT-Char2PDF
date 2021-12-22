@@ -77,7 +77,8 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
     name: 'DSA5-Char2PDF',
       icon: '<i class="fas fa-tasks"></i>',
       condition: li => {
-        const entity = ActorDirectory.collection.get(li.data("entityId"));
+        const entity = ActorDirectory.collection.get(li.data("documentId"));
+        console.log(ActorDirectory.collection)
         //check for the right DSA5 template and for the right type
         if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character") 
         {  
@@ -85,7 +86,7 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
         }
       },
       callback: li => {
-        const actor = ActorDirectory.collection.get(li.data("entityId"));
+        const actor = ActorDirectory.collection.get(li.data("documentId"));
         const exportPreferences = new ExportPreferences(actor);
         exportPreferences.render(true);
       }
