@@ -574,6 +574,29 @@ async function fillForm(_dsa_actor_id) {
 
   var temp = Array.from(name.values(), value => value.system.talentValue.value)
   form.getTextField("Talent_FW_"+destination).setText(temp+'')
+
+
+  let e_1_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
+  let e_2_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
+  let e_3_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
+  let e_1_value =  entity.system.characteristics[e_1_name].value
+  let e_2_value =  entity.system.characteristics[e_2_name].value
+  let e_3_value =  entity.system.characteristics[e_3_name].value
+
+  let routine = ""
+  if (e_1_value>=13 && e_2_value>=13 && e_3_value>=13){
+    console.log(temp[0])
+      if (temp[0]>=1 && temp[0]<4){ routine = "+3"}
+      else if (temp[0]>=4 && temp[0]<7){ routine = "+2"}
+      else if (temp[0]>=7 && temp[0]<10){ routine = "+1"}
+      else if (temp[0]>=10 && temp[0]<13){ routine = "0"}
+      else if (temp[0]>=13 && temp[0]<16){ routine = "-1"}
+      else if (temp[0]>=16 && temp[0]<19){ routine = "-2"}
+      else if (temp[0]>=19){ routine = "-3"}
+  }
+
+
+  form.getTextField("Talent_R_"+destination).setText(routine+'')
   }
 
   /** Combat */
