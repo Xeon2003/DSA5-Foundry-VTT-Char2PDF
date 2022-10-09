@@ -614,7 +614,7 @@ async function fillForm(_dsa_actor_id) {
   form.getTextField("KT_FW_"+destination).setText(temp1+'')
 
   var temp2 = Array.from(name.values(), value => value.system.attack.value)
-  form.getTextField("KT_AT_"+destination).setText(Number(temp2)+Number(at_fk_modifier)+'')
+  form.getTextField("KT_AT_"+destination).setText(Number(temp1)+Number(at_fk_modifier)+'')
 
   if (pa === 1){
   var max_LW_bonus = Math.floor(((Math.max.apply(Math, Leitwert))-8)/3) /** calculation Leitwert bonus  */
