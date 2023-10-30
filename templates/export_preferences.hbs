@@ -33,5 +33,13 @@
             -->
         </tbody>
     </table>
-        </div>
-    <button id="btn_Export">Export</button>
+
+    {{#if character }}
+    <button id="btn_Export">Heldenbogen speichern</button>
+    <button id="btn_details_export">Details speichern</button>
+    <button id="btn_export_handout">Handout speichern</button>
+    {{else}}
+    <button id="btn_export_handout">Handout speichern</button>
+    <button id="btn_export_creature">Kreatur speichern</button>
+    {{/if}}
+</form>

@@ -1,13 +1,13 @@
 {
-	"name": "dsa5-char2pdf",
-  "title": "DSA 5 - Char2pdf",
-  "description": "Export your Avartar to PDF Template",
-  "author": "JWinsen",
+	"name": "dsa5-pdfexport",
+  "title": "DSA 5 - PDF Export",
+  "description": "Export your Character to pdf",
+  "author": "Andreas H. Kelch",
   "license": "MIT LICENSE",
   "flags": {},
-  "version": "v0.5.3",
+  "version": "v1.0.0",
   "minimumCoreVersion": "0.8.8",
-  "compatibleCoreVersion": "10",
+  "compatibleCoreVersion": "11",
    "dependencies": [{
         "name": "dsa5",
         "type": "system"
@@ -19,8 +19,8 @@
     "./lib/FileSaver.js",
     "./lib/pdf-lib.js"
   ], 
-  "url": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF",
-  "manifest": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF/releases/latest/download/module.json",
-  "download": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF/releases/download/v0.5.3/module.zip",
-  "bugs": "https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF/issues/new/choose"
+  "url": "https://github.com/Xeon2003/DSA5-Foundry-VTT-Char2PDF",
+  "manifest": "https://github.com/Xeon2003/DSA5-Foundry-VTT-Char2PDF/releases/latest/download/module.json",
+  "download": "https://github.com/Xeon2003/DSA5-Foundry-VTT-Char2PDF/releases/download/v0.5.3/module.zip",
+  "bugs": "https://github.com/Xeon2003/DSA5-Foundry-VTT-Char2PDF/issues/new/choose"
 }

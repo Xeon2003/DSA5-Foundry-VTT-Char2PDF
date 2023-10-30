@@ -7,7 +7,7 @@ var modul_version = '';
  */
 
  class dsa5char2pdf {
-  static ID = 'dsa5-char2pdf';
+  static ID = 'dsa5-pdfexport';
 
   static TEMPLATES = {
     PDF_Template: `modules/${this.ID}/templates/template.pdf`,
@@ -74,19 +74,21 @@ Hooks.once('devModeReady', ({ registerPackageDebugFlag }) => {
 
 Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
   entryOptions.push({
-    name: 'DSA5-Char2PDF',
+    name: 'Exportieren',
       icon: '<i class="fas fa-tasks"></i>',
       condition: li => {
         const entity = ActorDirectory.collection.get(li.data("documentId"));
         console.log(ActorDirectory.collection)
         //check for the right DSA5 template and for the right type
-        if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character")
+        //creature
+        if (entity.type == "creature" || entity.type == "npc" || entity.type == "character" || entity.sheet == "ActorSheetdsa5Character")
         {
           return entity.id;
         }
       },
       callback: li => {
         const actor = ActorDirectory.collection.get(li.data("documentId"));
+        console.log(actor)
         const exportPreferences = new ExportPreferences(actor);
         exportPreferences.render(true);
       }
@@ -109,7 +111,7 @@ class ExportPreferences extends FormApplication {
       id: 'export_preferences',
       submitOnChange: true,
       template: dsa5char2pdf.TEMPLATES.export_preferences,
-      title: 'DSA5 - char2PDF',
+      title: 'Exportieren',
       chkbox_actorstale: false, 
       chkbox_delpages: false,
     };
@@ -121,6 +123,7 @@ class ExportPreferences extends FormApplication {
     return {
       ID: this.actor.id,
       actor: this.actor.name,
+      character: ["character","npc"].includes(this.actor.type),
       chkbox_actorstale: false,
       chkbox_delpages: false
     };
@@ -129,11 +132,30 @@ class ExportPreferences extends FormApplication {
 
 	activateListeners() {
 
-		document.getElementById("btn_Export").addEventListener("click", event => {
+		document.getElementById("btn_Export")?.addEventListener("click", event => {
 		event.preventDefault();
 		fillForm(this.actor.id);
     this.close();
 		});
+
+    document.getElementById("btn_details_export")?.addEventListener("click", event => {
+      event.preventDefault();
+      build_details(this.actor.id);
+      this.close();
+    });
+
+    document.getElementById("btn_export_handout")?.addEventListener("click", event => {
+      event.preventDefault();
+      build_creature_handout(this.actor.id);
+      this.close();
+    });
+
+    document.getElementById("btn_export_creature")?.addEventListener("click", event => {
+      event.preventDefault();
+      build_creature_card(this.actor.id);
+      this.close();
+    });
+    
 /**
     const chkbox_actorstale = document.querySelector("input[name=chkbox_actors_tale]");
     chkbox_actorstale.addEventListener('change', function() {
@@ -179,6 +201,7 @@ class ExportPreferences extends FormApplication {
       canvas = null;
     };
     // Load the image
+    try{
     img.src = src;
     // make sure the load event fires for cached images too
     if (img.complete || img.complete === undefined) {
@@ -186,6 +209,9 @@ class ExportPreferences extends FormApplication {
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
       // Try again
       img.src = src;
+    }
+    }catch(error){
+      console.log("image error")
     }
   })
 }
@@ -242,7 +268,6 @@ function Leitwert_long (Leitwert_short) {
  */
 
 async function fillForm(_dsa_actor_id) {
-  try {
 /** declaration */
  var PDFDocument = PDFLib.PDFDocument;
  var StandardFonts = PDFLib.StandardFonts;
@@ -287,18 +312,28 @@ async function fillForm(_dsa_actor_id) {
     form.getTextField('Held_Charakteristika').setText(entity.system.details.distinguishingmark.value)
 
   /** actor picture */
-
   const actor_image_url = entity.img
+  let imageOk = true
+  let actor_imageBytes = null
+  await fetch(actor_image_url).then(resp=>{
+    if (resp.status!==200){
+      imageOk=false
+    }
+  })
 
-  if ((actor_image_url.split('.').pop()) === "png" || (actor_image_url.split('.').pop()) === "jpg") {
-    var actor_imageBytes = await fetch(actor_image_url).then(res => res.arrayBuffer())
+  if (imageOk){
+    if ((actor_image_url.split('.').pop()) === "png" || (actor_image_url.split('.').pop()) === "jpg") {
+      actor_imageBytes = await fetch(actor_image_url).then(res => res.arrayBuffer())
+    } else {
+      actor_imageBytes = await get_actor_pic(actor_image_url)
+    }
+    if (actor_imageBytes){
+      var actor_image = await pdfDoc.embedPng(actor_imageBytes)
+      form.getButton('Charakterbild').setImage(actor_image)
+    }
   }
-  else {
-     actor_imageBytes = await get_actor_pic(actor_image_url)
-  }
-    var actor_image = await pdfDoc.embedPng(actor_imageBytes)
-    form.getButton('Charakterbild').setImage(actor_image)
 
+  
   /** main attributes */
 
   const p_mu = entity.system.characteristics.mu.value
@@ -387,21 +422,21 @@ async function fillForm(_dsa_actor_id) {
   /** disadvantages */
 
     const disadvantage = map.filter(value => value.type === "disadvantage");
-    var f_disadvantage = Array.from(disadvantage.values(), value => value.name).join(", ")
+    var f_disadvantage = Array.from(disadvantage.values(), value => value.system.max.value==="0"?value.name:value.name+ ' ' + romanize(value.system.step.value)).join(", ")
     form.getTextField('Held_Nachteile').setText(f_disadvantage)
 
   /** advantages */
 
     const advantage = map.filter(value => value.type === "advantage");
-    var f_advantage = Array.from(advantage.values(), value => value.name).join(", ")
+    var f_advantage = Array.from(advantage.values(), value => value.system.max.value==="0"?value.name:value.name+ ' ' + romanize(value.system.step.value)).join(", ")
     form.getTextField('Held_Vorteile').setText(f_advantage)
 
   /** specialability */
 
     const specialability = map
     .filter(value => value.type === "specialability")
-    .filter(value => value.system.category.value === "general");
-    var f_specialability = Array.from(specialability.values(), value => value.name).join(", ")
+    .filter(value => (value.system.category.value === "general" || value.system.category.value === "fatePoints"));
+    var f_specialability = Array.from(specialability.values(), value => value.system.maxRank.value==="0"?value.name:value.name+ ' ' + romanize(value.system.step.value)).join(", ")
     form.getTextField('Held_SF_allgemein').setText(f_specialability)
 
   /** language */
@@ -426,22 +461,22 @@ async function fillForm(_dsa_actor_id) {
 
   form.getTextField('LE_Max_1').setText(entity.system.status.wounds.max+'')
   form.getTextField('LE_Max_3').setText(entity.system.status.wounds.max+'')
-  form.getTextField('LE_Wert_1').setText(entity.system.status.wounds.current+'')
+  form.getTextField('LE_Wert_1').setText(entity.system.status.wounds.initial+'')
   //form.getTextField('LE_Aktuell_1').setText(entity.system.status.wounds.current+'')
   form.getTextField('LE_Kauf_1').setText(entity.system.status.wounds.advances+'')
-  form.getTextField('LE_BM_1').setText(entity.system.status.wounds.modifier+'')
+  form.getTextField('LE_BM_1').setText((entity.system.status.wounds.current - entity.system.status.wounds.initial)+'')
 
   /** soulpower*/
 
   form.getTextField('SK_Max_1').setText(entity.system.status.soulpower.max+'')
-  form.getTextField('SK_Wert_1').setText(entity.system.status.soulpower.value+'')
-  form.getTextField('SK_BM_1').setText(entity.system.status.soulpower.modifier+'')
+  form.getTextField('SK_Wert_1').setText(entity.system.status.soulpower.initial+'')
+  form.getTextField('SK_BM_1').setText((entity.system.status.soulpower.value - entity.system.status.soulpower.initial)+'')
 
   /** toughness*/
 
   form.getTextField('ZK_Max_1').setText(entity.system.status.toughness.max+'')
-  form.getTextField('ZK_Wert_1').setText(entity.system.status.toughness.value+'')
-  form.getTextField('ZK_BM_1').setText(entity.system.status.toughness.modifier+'')
+  form.getTextField('ZK_Wert_1').setText(entity.system.status.toughness.initial+'')
+  form.getTextField('ZK_BM_1').setText((entity.system.status.toughness.value - entity.system.status.toughness.initial)+'')
 
   /** dodge*/
 
@@ -454,14 +489,14 @@ async function fillForm(_dsa_actor_id) {
   form.getTextField('AE_Max_1').setText(entity.system.status.astralenergy.max+'')
   form.getTextField('AE_Wert_1').setText(entity.system.status.astralenergy.current+'')
   form.getTextField('AE_Kauf_1').setText(entity.system.status.astralenergy.advances+'')
-  form.getTextField('AE_BM_1').setText(entity.system.status.astralenergy.modifier+'')
+  form.getTextField('AE_BM_1').setText(entity.system.status.astralenergy.gearmodifier+'')
 
   /** karmaenergy */
 
   form.getTextField('KE_Max_1').setText(entity.system.status.karmaenergy.max+'')
   form.getTextField('KE_Wert_1').setText(entity.system.status.karmaenergy.current+'')
   form.getTextField('KE_Kauf_1').setText(entity.system.status.karmaenergy.advances+'')
-  form.getTextField('KE_BM_1').setText(entity.system.status.karmaenergy.modifier+'')
+  form.getTextField('KE_BM_1').setText(entity.system.status.karmaenergy.gearmodifier+'')
 
   /** experience */
 
@@ -485,6 +520,9 @@ async function fillForm(_dsa_actor_id) {
     case "EXP.brillant":
       exp_translate="Brilliant"
       break;
+      case "EXP.legendary":
+        exp_translate="Legendär"
+        break;
     default:
     break;
   };
@@ -585,7 +623,6 @@ async function fillForm(_dsa_actor_id) {
 
   let routine = ""
   if (e_1_value>=13 && e_2_value>=13 && e_3_value>=13){
-    console.log(temp[0])
       if (temp[0]>=1 && temp[0]<4){ routine = "+3"}
       else if (temp[0]>=4 && temp[0]<7){ routine = "+2"}
       else if (temp[0]>=7 && temp[0]<10){ routine = "+1"}
@@ -603,6 +640,10 @@ async function fillForm(_dsa_actor_id) {
   /** general */
 
   form.getTextField('LE_Max_2').setText(entity.system.status.wounds.max+'')
+  form.getTextField('LE_Verlust_1').setText(Math.round(entity.system.status.wounds.max/4*3)+'')
+  form.getTextField('LE_Verlust_2').setText(Math.round(entity.system.status.wounds.max/2)+'')
+  form.getTextField('LE_Verlust_3').setText(Math.round(entity.system.status.wounds.max/4)+'')
+  form.getTextField('LE_Verlust_4').setText(5+'')
   form.getTextField('GS_Max_1').setText(entity.system.status.speed.max+'')
   form.getTextField('AW_Max_2').setText(entity.system.status.dodge.max+'')
   form.getTextField('INI_Max_1').setText(Math.round((entity.system.characteristics.mu.value+entity.system.characteristics.ge.value)/2)+'')
@@ -699,6 +740,9 @@ async function fillForm(_dsa_actor_id) {
       switch(reach_translate) {
         case "short":
           reach_translate="kurz"
+          break;
+        case "medium":
+          reach_translate="mittel"
           break;
         case "long":
           reach_translate="lang"
@@ -799,13 +843,13 @@ async function fillForm(_dsa_actor_id) {
     }
   }
   (form.getTextField('Gewicht_1')).setText(Math.round(sum_weight1 * 100) / 100+'');
-  (form.getTextField('Gewicht_2')).setText(Math.round((sum_weight1+sum_weight2)* 100) / 100+'');
+  //(form.getTextField('Gewicht_2')).setText(Math.round((sum_weight1+sum_weight2)* 100) / 100+'');
   (form.getTextField('Trag_1')).setText(Number(entity.system.characteristics.kk.value)*2+'');
 
   /** Mage */
   /** spells */
   const combat_spells = map
-  .filter(value => value.type === "spell")
+  .filter(value => (value.type === "spell"|| value.type === "ritual"))
   var arrayLength = combat_spells.length;
     if (arrayLength > 40) {
       arrayLength = 40
@@ -819,9 +863,9 @@ async function fillForm(_dsa_actor_id) {
       (form.getTextField('Z_ZDauer_'+(i+1))).setText((combat_spells[i].system.castingTime.value+''));
       (form.getTextField('Z_RW_'+(i+1))).setText((combat_spells[i].system.range.value+''));
       (form.getTextField('Z_WDauer_'+(i+1))).setText((combat_spells[i].system.duration.value+''));
-      (form.getTextField('Z_Merkmal_'+(i+1))).setText((''));
+      (form.getTextField('Z_Merkmal_'+(i+1))).setText((combat_spells[i].system.feature+''));
       (form.getTextField('Z_SF_'+(i+1))).setText((combat_spells[i].system.StF.value+''));
-      (form.getTextField('Z_Wirkung_'+(i+1))).setText((combat_spells[i].system.effect.value+''));
+      (form.getTextField('Z_Wirkung_'+(i+1))).setText((combat_spells[i].system.effect.value+'').split(".")[0].split(",")[0]+"...");
       (form.getTextField('Z_Seite_'+(i+1))).setText((''));
     }
 
@@ -842,7 +886,15 @@ async function fillForm(_dsa_actor_id) {
   const special_magic = map
   .filter(value => value.type === "specialability")
   .filter(value => value.system.category.value === "magical");
-  var f_special_magic = Array.from(special_magic.values(), value => value.name + ' ' + romanize(value.system.step.value)).join(", ")
+  var f_special_magic = Array.from(special_magic.values(), value => {
+    let val 
+    if(value.system.maxRank.value==='0' || value.system.maxRank.value===0){
+      val = value.name+""
+    }else{
+      val = value.name+ ' ' + romanize(value.system.step.value)
+    }
+    return val
+  }).join(", ")
 
   form.getTextField('Held_SF_Mag').setText(f_special_magic)
 
@@ -865,7 +917,7 @@ async function fillForm(_dsa_actor_id) {
       (form.getTextField('L_WDauer_'+(i+1))).setText((combat_liturgy[i].system.duration.value+''));
       (form.getTextField('L_Aspekt_'+(i+1))).setText((''));
       (form.getTextField('L_SF_'+(i+1))).setText((combat_liturgy[i].system.StF.value+''));
-      (form.getTextField('L_Wirkung_'+(i+1))).setText((combat_liturgy[i].system.effect.value+''));
+      (form.getTextField('L_Wirkung_'+(i+1))).setText((combat_liturgy[i].system.effect.value+'').split(".")[0].split(",")[0]+"...");
       (form.getTextField('L_Seite_'+(i+1))).setText((''));
     }
 
@@ -886,25 +938,470 @@ async function fillForm(_dsa_actor_id) {
   const special_cleric = map
   .filter(value => value.type === "specialability")
   .filter(value => value.system.category.value === "clerical");
-  var f_special_cleric = Array.from(special_cleric.values(), value => value.system.maxRank.value===0?value.name:value.name + ' ' + romanize(value.system.step.value)).join(", ")
+  var f_special_cleric = Array.from(special_cleric.values(), value => {
+    let val 
+    if(value.system.maxRank.value==='0' || value.system.maxRank.value===0){
+      val = value.name+""
+    }else{
+      val = value.name+ ' ' + romanize(value.system.step.value)
+    }
+    return val
+  }).join(", ")
 
   form.getTextField('Held_SF_Karm').setText(f_special_cleric)
 
 	/** set PDF Metadata for PDF*/
 	pdfDoc.setTitle("DSA5-"+entity.name+".pdf created on "+today)
-	pdfDoc.setSubject('https://github.com/JWinsen/DSA5-Foundry-VTT-Char2PDF')
-	pdfDoc.setProducer('DSA5 - char2PDF ' +modul_version)
-	pdfDoc.setCreator('pdf-lib (https://github.com/Hopding/pdf-lib)')
+	pdfDoc.setSubject('https://github.com/Xeon2003/DSA5-Foundry-VTT-Char2PDF')
+	pdfDoc.setProducer('DSA5 - pdfexport ' +modul_version)
 	pdfDoc.setCreationDate(new Date())
 	pdfDoc.setModificationDate(new Date())
 
 	/** save filled template */
+  const pdfBytes = await pdfDoc.save()
+  const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
+  saveAs(blob, "DSA5-"+entity.name+".pdf")
+}
 
-    const pdfBytes = await pdfDoc.save()
-    const blob = new Blob([pdfBytes], {type: "application/pdf;charset=utf-8"});
-    saveAs(blob, "DSA5-"+entity.name+".pdf")
+
+async function build_details(_dsa_actor_id) {
+   const entity = ActorDirectory.collection.get(_dsa_actor_id);
+   let map = entity.items;
+   /** GENERATE Details**/
+  
+  let datas = []
+  for(const obj  of Array.from(map.values())){
+    if(['skill','meleeweapon', 'armor', 'equipment', 'money', 'combatskill'].includes(obj.type))continue
+
+    let rule = obj.system.rule?obj.system.rule.value:""
+    if (obj.system.effect){
+      rule += "<br>"+obj.system.effect.value
+    }
+
+    if (["spell","ritual", "liturgy", "ceremony"].includes(obj.type)){
+      let mod = ""
+      if (obj.system.resistanceModifier.value!=="-"){
+        mod = `(-${obj.system.resistanceModifier.value})`
+      }
+      
+      rule+=`
+        <table>
+        <tr>
+          <td>Probe:</td>
+          <td>${(obj.system.characteristic1.value).toUpperCase()+' / '+(obj.system.characteristic2.value).toUpperCase()+' / '+(obj.system.characteristic3.value).toUpperCase()}
+
+          ${mod}
+          </td>
+        </tr>
+        <tr>
+          <td>Zielkategorie:</td>
+          <td>${obj.system.targetCategory.value}</td>
+        </tr>
+        <tr>
+          <td>Kosten:</td>
+          <td>${obj.system.AsPCostDetail.value + (!obj.system.canChangeCost.value?"!":"")}</td>
+        </tr>
+        <tr>
+          <td>Zauberdauer:</td>
+          <td>${ ["ritual", "ceremony"].includes(obj.type)? obj.system.castingTime.value+" Minuten" :obj.system.castingTime.value+" A" + (!obj.system.canChangeCastingTime.value?" !":"")} </td>
+        </tr>
+        <tr>
+          <td>Wirkungsdauer:</td>
+          <td>${obj.system.duration.value}</td>
+        </tr>
+        <tr>
+          <td>Reichweite:</td>
+          <td>${obj.system.range.value +(!obj.system.canChangeRange.value?"!":"")}</td>
+        </tr>
+        <tr>
+          <td>Merkmal:</td>
+          <td>${obj.system.feature}</td>
+        </tr>
+        <tr>
+          <td>Steigerungsfaktor:</td>
+          <td>${obj.system.StF.value}</td>
+        </tr>
+        <tr>
+          <td>Verbreitung:</td>
+          <td>${obj.system.distribution.value}</td>
+        </tr>
+        </table
+      `
+    }
+    let descr= obj.system.description?.value?.split("<h3>Geste und Formel</h3>")[0]
+
+
+    function getGroup(type){
+      if (["spellextension", "magictrick", "blessing","liturgy", "ritual","ceremony","spell"].includes(type)){
+        return "Magie / Karmal"
+      }
+
+      if (["disadvantage","advantage"].includes(type)){
+        return "Vor-/Nachteile"
+      }
+      if (["specialability"].includes(type)){
+        return "Sonderfertigkeiten"
+      }
+      
+
+      return type
+    }
+
+
+    datas.push({
+      "name":obj.name,
+      "descr":descr,
+      "rule":rule,
+      "type":obj.type,
+      "group":getGroup(obj.type)
+    })
+
   }
-  catch (err) {
-  ui.notifications.error(`Char2PDF - Error: ${err.message}`);
+  
+
+  datas.sort((a,b)=> {
+    if(a["name"] > b["name"]){
+      return 1
+    }else{
+      return -1
+    }
+  })
+
+
+  const groupedMap = datas.reduce(
+    (entryMap, e) => entryMap.set(e.group, [...entryMap.get(e.group)||[], e]),
+    new Map([["Vor-/Nachteile",[]],["Sonderfertigkeiten",[]],["Magie / Karmal",[]]])
+);
+
+  let detailsdata = ""
+  for(const [key,value] of groupedMap.entries()){
+    detailsdata+=`<h2 class="groupname">${key}</h2><hr>`
+    for(const e of value){
+      let rule = ""
+      if(e["rule"]){
+        rule =`
+        <div>
+          ${e["rule"]}
+        </div>`
+      }
+  
+      detailsdata+=`
+      <div class="entry">
+        <h2>${e["name"]}</h2>
+        <div>
+          ${e["descr"]}
+        </div>
+        ${rule}
+      </div>
+      `
+    }
   }
+  
+  
+
+  const style=`
+    <style>
+    @media print {
+      .grid{
+        display:block;
+        column-count:2; 
+        -webkit-column-count: 2;
+        -moz-column-count: 2;
+      }
+      .groupname{
+        
+      }
+    }
+
+      .entry{
+        display:flex;
+        flex-direction: column;
+        page-break-inside: avoid;
+        
+      }
+      .entry h2{
+        margin-bottom:0;
+      }
+      
+
+      .grid__{
+        display:grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-column-gap: 10px;
+        grid-row-gap: 10px;
+      }
+
+    </style>
+  `
+  const ablob = new Blob([`<html><head>${style}</head><body><h1>Name: ${entity.name}</h1><div class="grid">${detailsdata}</div></body></html>`]);
+  saveAs(ablob, "DSA5-"+entity.name+"-details.html")
+}
+
+async function build_creature_handout(_dsa_actor_id){
+  /*
+    Gefahr:
+      LEP, TP, AKTIONEN,
+  
+  
+  */
+
+
+  const entity = ActorDirectory.collection.get(_dsa_actor_id);
+   let map = entity.items;
+   let sizes ={"tiny":"klein","average":"mittel","small":"klein","big":"gro&szlig;","giant":"riesig"}
+   const background = await toDataUrl(dsa5char2pdf.PATH.main+"images/Wertekasten.png")
+   const img = await toDataUrl(entity.img)
+   let style =`
+    .card{
+      background-position: center center;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      width: 480px;
+      height: 810px;
+      padding: 60px;
+      -webkit-print-color-adjust: exact; 
+    }
+    h1{
+      text-align:center;
+      margin-top:20px;
+    }
+
+    ul{
+      list-style:none;
+      text-align: end;
+      padding:0;
+    }
+    .img{
+      width: 100%;
+    height: 342px;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    -webkit-print-color-adjust: exact;
+    margin-top: -10px;
+    margin-bottom: -20px; 
+    }
+    .stats{
+      display: flex;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 20px;
+    }
+    .simple li{
+      padding-bottom:10px;
+    }
+
+    .infos li {
+      padding-bottom:90px;
+    }
+    .values{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      margin-top:20px;
+      grid-column-gap: 10px;
+      grid-row-gap: 10px;
+    }
+    .values .data div{
+      border-bottom:1px solid black;
+      height:15px;
+      margin-bottom:15px;
+    }
+
+    .values .descr div{
+      height:15px;
+      margin-bottom:15px;
+      border-bottom: 1px solid transparent;
+    }
+
+   `
+   const ablob = new Blob([`<html><head><style>${style}</style></head><body>
+   <div class="card" style="background-image:url('${background}');">
+    <h1>______________________________</h1>
+    <div class="img" style="background-image:url('${img}');"></div>
+    <div class="stats">
+      <div>
+        <div class="values">
+          <div class="descr">
+            <div>Gr&ouml;&szlig;e</div>
+            <div>Aktionen</div>
+            <div>INI</div>
+            <div>GS</div>
+            <div>Typus</div>
+            <div>RS</div>
+            <div>VW</div>
+            <div>SK</div>
+            <div>ZK</div>
+          </div>
+          <div class="data">
+            <div>${sizes[entity.system.status.size.value]}</div>
+            <div>${entity.system.actionCount.value}</div>
+            <div>${entity.system.status.initiative.current}</div>
+            <div>${entity.system.status.speed.initial}</div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>
+        <div>Weiter Informationen:</div>
+      </div>
+      <ul class="infos">
+        <li>QS1:</li>
+        <li>QS2:</li>
+        <li>QS3+:</li>
+      </ul>
+    </div>
+   </div>
+   </body></html>`]);
+   saveAs(ablob, "DSA5-"+entity.name+"-handouts.html")
+
+}
+
+
+
+async function build_creature_card(_dsa_actor_id){
+  /*
+    Gefahr:
+      LEP, TP, AKTIONEN,
+  
+  
+  */
+
+
+  const entity = ActorDirectory.collection.get(_dsa_actor_id);
+   let map = entity.items;
+   const background = await toDataUrl(dsa5char2pdf.PATH.main+"images/Wertekasten_sl.png")
+   const img = await toDataUrl(entity.img)
+   let style =`
+   body{
+    position:relative;
+    width:628px;
+   }
+    .card{
+      background-position: top left;
+    background-size: contain;
+    background-repeat: no-repeat;
+    /* width: 835px; */
+    height: 588px;
+    width: 480px;
+    padding: 60px 100px 60px 60px;
+    -webkit-print-color-adjust: exact;
+    }
+    h1{
+      text-align:left;
+      margin-top:0px;
+    }
+
+    ul{
+      list-style:none;
+      text-align: left;
+      padding:0;
+    }
+    .img{
+      background-color: #cbc9bb;
+      width: 220px;
+      height: 220px;
+      background-size: cover;
+      -webkit-print-color-adjust: exact;
+      position: absolute;
+      right: 1px;
+      top: 8px;
+      clip-path: circle(35% at 50% 50%);
+      z-index: -1;
+    }
+    .stats{
+      display: grid;
+      width: 100%;
+      gap: 5px;
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .simple li{
+      padding-bottom:10px;
+    }
+
+    .infos li {
+      padding-bottom:50px;
+    }
+    .attributes{
+      columns: 4;
+      -webkit-columns: 4;
+      -moz-columns: 4;
+      margin:0;
+      white-space: nowrap;
+    }
+    .attributes2{
+      columns: 2;
+      -webkit-columns: 2;
+      -moz-columns: 2;
+      margin:0;
+      white-space: nowrap;
+    }
+    .attributes2 li{
+      width:1px;
+    }
+    .attributes3 {
+      margin:0;
+      white-space: nowrap;
+    }
+   `
+   const ablob = new Blob([`<html><head><style>${style}</style></head><body>
+   <div class="img" style="background-image:url('${img}');"></div>
+   <div class="card" style="background-image:url('${background}');">
+    <h1>${entity.name}</h1>
+    
+    <div class="stats">
+      <ul class="attributes">
+        <li><b>MU</b> ${entity.system.characteristics.mu.initial}</li>
+        <li><b>FF</b> ${entity.system.characteristics.ff.initial}</li>
+        <li><b>KL</b> ${entity.system.characteristics.kl.initial}</li>
+        <li><b>GE</b> ${entity.system.characteristics.ge.initial}</li>
+        <li><b>IN</b> ${entity.system.characteristics.in.initial}</li>
+        <li><b>KO</b> ${entity.system.characteristics.ko.initial}</li>
+        <li><b>CH</b> ${entity.system.characteristics.ch.initial}</li>
+        <li><b>KK</b> ${entity.system.characteristics.kk.initial}</li>
+      </ul>
+      <div></div>
+      <ul class="attributes">
+        <li><b>LeP</b> ${entity.system.status.wounds.value}</li>
+        <li><b>VW</b> ${entity.system.status.dodge.value}</li>
+        <li><b>AsP</b> ${entity.system.status.astralenergy.value}</li>
+        <li><b>SK</b> ${entity.system.status.soulpower.value}</li>
+        <li><b>KaP</b> ${entity.system.status.karmaenergy.value}</li>
+        <li><b>ZK</b> ${entity.system.status.toughness.value}</li>
+        <li><b>INI</b> ${entity.system.status.initiative.current}</li>
+        <li><b>GS</b> ${entity.system.status.speed.initial}</li>
+      </ul>
+      <div></div>
+      <ul class="attributes2">
+        <li><b>Aktionen</b> ${entity.system.actionCount.value}</li>
+        <li><b>Anzahl</b> ${entity.system.count.value}</li>
+        <li><b>Gr&ouml;&szlig;</b> ${entity.system.status.size.value}</li>
+        <li><b>Typus</b> ${entity.system.creatureClass.value}</li>
+        <li><b>Flucht</b> ${entity.system.flight.value}</li>
+        <li><b>Verhalten</b> ${entity.system.behaviour.value}</li>
+
+      </ul>
+      <div></div>
+      <ul class="attributes3">
+        <li><b>Aktionen</b> ${entity.system.actionCount.value}</li>
+        <li><b>Anzahl</b> ${entity.system.count.value}</li>
+        <li><b>Gr&ouml;&szlig;</b> ${entity.system.status.size.value}</li>
+        <li><b>Typus</b> ${entity.system.creatureClass.value}</li>
+      </ul>
+      <div></div>
+
+      <div>${entity.system.specialRules.value}</div>
+      <ul class="infos">
+        <li>QS1:</li>
+        <li>QS2:</li>
+        <li>QS3+:</li>
+      </ul>
+    </div>
+   </div>
+   </body></html>`]);
+   saveAs(ablob, "DSA5-"+entity.name+"-card.html")
+
 }
