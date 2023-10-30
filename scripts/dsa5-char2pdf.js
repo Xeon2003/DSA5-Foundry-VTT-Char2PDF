@@ -782,7 +782,7 @@ async function fillForm(_dsa_actor_id) {
   /** Mage */
   /** spells */
   const combat_spells = map
-  .filter(value => value.type === "spell")
+  .filter(value => value.type === "spell" || value.type === "ritual");
   var arrayLength = combat_spells.length;    
     if (arrayLength > 40) {
       arrayLength = 40 
