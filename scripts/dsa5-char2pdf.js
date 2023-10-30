@@ -78,7 +78,6 @@ Hooks.on("getActorDirectoryEntryContext", (html, entryOptions) => {
       icon: '<i class="fas fa-tasks"></i>',
       condition: li => {
         const entity = ActorDirectory.collection.get(li.data("documentId"));
-        console.log(ActorDirectory.collection)
         //check for the right DSA5 template and for the right type
         if (entity.type == "character" || entity.sheet == "ActorSheetdsa5Character") 
         {  
@@ -485,6 +484,9 @@ async function fillForm(_dsa_actor_id) {
     case "EXP.brillant":
       exp_translate="Brilliant"
       break;
+    case "EXP.legendary":
+      exp_translate="Legendär"
+      break;
     default:
     break;
   };
@@ -576,12 +578,12 @@ async function fillForm(_dsa_actor_id) {
   form.getTextField("Talent_FW_"+destination).setText(temp+'')
 
 
-  let e_1_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
-  let e_2_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
-  let e_3_name = Array.from(name.values(), value => value.system.characteristic1.value)[0]
-  let e_1_value =  entity.system.characteristics[e_1_name].value
-  let e_2_value =  entity.system.characteristics[e_2_name].value
-  let e_3_value =  entity.system.characteristics[e_3_name].value
+  let e_1_name = Array.from(name.values(), value => value.data.data.characteristic1.value)[0]
+  let e_2_name = Array.from(name.values(), value => value.data.data.characteristic1.value)[0]
+  let e_3_name = Array.from(name.values(), value => value.data.data.characteristic1.value)[0]
+  let e_1_value =  entity.data.data.characteristics[e_1_name].value
+  let e_2_value =  entity.data.data.characteristics[e_2_name].value
+  let e_3_value =  entity.data.data.characteristics[e_3_name].value
 
   let routine = ""
   if (e_1_value>=13 && e_2_value>=13 && e_3_value>=13){
